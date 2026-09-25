@@ -46,8 +46,8 @@ async def task(id: int):
 
 @app.post("/tasks/", status_code=201)
 async def create(task: taskCreate):
-    if task is None:
-        return JSONResponse(status_code=404, content={"error": "Title is empty"})
+    if not task.title or not task.title.strip():
+        return JSONResponse(status_code=400, content={"error": "Title is empty"})
 
     id = task_objects[-1]["id"] + 1
     task_objects.append({"id": id, "title": task, "done": False})
