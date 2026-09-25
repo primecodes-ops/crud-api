@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from pydantic import BaseModel
 from fastapi.responses import JSONResponse
 
 app = FastAPI()
@@ -7,6 +8,10 @@ task_objects = [
     {"id": 1, "title": "Finish CRUD API", "done": False},
     {"id": 5, "title": "Feed cats' lunch", "done": True},
 ]
+
+
+class taskCreate(BaseModel):
+    title: str
 
 
 @app.get("/")
@@ -37,3 +42,14 @@ async def task(id: int):
         return JSONResponse(status_code=404, content={"error": "Task 99 not found"})
 
     return task
+
+
+@app.post("/tasks/", status_code=201)
+async def create(task: taskCreate):
+    if task is None:
+        return JSONResponse(status_code=404, content={"error": "Title is empty"})
+
+    id = task_objects[-1]["id"] + 1
+    task_objects.append({"id": id, "title": task, "done": False})
+
+    return {"id": id, "title": task, "done": False}
