@@ -40,7 +40,7 @@ async def tasks():
 
 
 """
-curl -i [http://localhose:port/tasks]
+curl -i [http://localhose:8000/tasks]
 """
 
 
@@ -55,7 +55,7 @@ async def task(id: int):
 
 
 """
-curl -i [http://localhose:port/tasks/{id}]
+curl -i [http://localhose:8000/tasks/{id}]
 """
 
 
@@ -71,7 +71,7 @@ async def create(task: taskCreate):
 
 
 """
-curl -i -X POST [http://localhost:port/tasks] -H "Content-Type: application/json" -d '{"title":"Buy milk"}'
+curl -i -X POST [http://localhost:8000/tasks] -H "Content-Type: application/json" -d '{"title":"Buy milk"}'
 """
 
 
@@ -95,7 +95,7 @@ async def update(id: int, task: taskChange):
 
 
 """
-curl -i -X PUT [http://localhost:port/tasks/{id}] -H "Content-Type: application/json" -d '{"title":"Buy bread", "done": false}'
+curl -i -X PUT [http://localhost:8000/tasks/{id}] -H "Content-Type: application/json" -d '{"title":"Buy bread", "done": false}'
 """
 
 
@@ -110,5 +110,5 @@ async def delete(id: int):
 
 
 """
-curl -i -X DELETE [http://localhost:port/tasks/{id}]
+curl -i -X DELETE [http://localhost:8000/tasks/{id}]
 """
