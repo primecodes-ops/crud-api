@@ -3,13 +3,29 @@
 A simple CRUD API for managing tasks, built with FastAPI.
 
 ## Installation
-Pre-requisites
+**Pre-requisites**
 - Python 3.10+
 - pip
 
 ```bash
 git clone https://github.com/primecodes-ops/crud-api.git
 cd crud-api
+```
+
+### Create a virtual environment
+```bash
+python3 -m venv .venv   # macOS/Linux
+python -m venv .venv    # Windows
+```
+
+### Activate .venv first
+```bash
+source .venv/bin/activate   # macOS/Linux
+.venv\Scripts\activate      # Windows
+```
+
+###  Install dependencies
+```bash
 pip install -r requirements.txt
 ```
 
