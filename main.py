@@ -14,6 +14,11 @@ class taskCreate(BaseModel):
     title: str
 
 
+class taskChange(BaseModel):
+    title: str
+    done: bool
+
+
 @app.get("/")
 async def root():
     return {"message": "hello world"}
@@ -34,6 +39,11 @@ async def tasks():
     return task_objects
 
 
+"""
+curl -i [http://localhose:port/tasks]
+"""
+
+
 @app.get("/tasks/{id}")
 async def task(id: int):
     task = next((item for item in task_objects if item["id"] == id), None)
@@ -44,7 +54,12 @@ async def task(id: int):
     return task
 
 
-@app.post("/tasks/", status_code=201)
+"""
+curl -i [http://localhose:port/tasks/{id}]
+"""
+
+
+@app.post("/tasks/", status_code=201, response_model=taskCreate)
 async def create(task: taskCreate):
     if not task.title or not task.title.strip():
         return JSONResponse(status_code=400, content={"error": "Title is empty"})
@@ -53,3 +68,47 @@ async def create(task: taskCreate):
     task_objects.append({"id": id, "title": task, "done": False})
 
     return {"id": id, "title": task, "done": False}
+
+
+"""
+curl -i -X POST [http://localhost:port/tasks] -H "Content-Type: application/json" -d '{"title":"Buy milk"}'
+"""
+
+
+@app.put("/tasks/{id}", response_model=taskChange)
+async def update(id: int, task: taskChange):
+    if not task.title or not task.title.strip():
+        return JSONResponse(status_code=400, content={"error": "Title is empty"})
+
+    if not isinstance(task.done, bool):
+        return JSONResponse(
+            status_code=400, content={"error": "Done can only be true or false."}
+        )
+
+    for item in task_objects:
+        if item["id"] == id:
+            item["title"] = task.title
+            item["done"] = task.done
+            return item
+
+    return JSONResponse(status_code=404, content={"error": "Task not found."})
+
+
+"""
+curl -i -X PUT [http://localhost:port/tasks/{id}] -H "Content-Type: application/json" -d '{"title":"Buy bread", "done": false}'
+"""
+
+
+@app.delete("/tasks/{id}", status_code=204)
+async def delete(id: int):
+    for i, item in enumerate(task_objects):
+        if item["id"] == id:
+            task_objects.pop(i)
+            return
+
+    return JSONResponse(status_code=404, content={"error": "Task not found."})
+
+
+"""
+curl -i -X DELETE [http://localhost:port/tasks/{id}]
+"""
