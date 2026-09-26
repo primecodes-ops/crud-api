@@ -49,7 +49,7 @@ curl -i -X POST http://localhost:8000/tasks -H "Content-Type: application/json" 
 
 ***Update a task***
 ```bash
-curl -i -X PUT http://localhost:8000/tasks/{id} -H "Content-Type: application/json" -d '{"title":"Buy bread", "done": false}'
+curl -i -X PUT http://localhost:8000/tasks/{id} -H "Content-Type: application/json" -d '{"title":"{title}", "done": false}'
 ```
 
 ***Delete a task***
