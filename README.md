@@ -7,16 +7,16 @@ Pre-requisites
 - Python 3.10+
 - pip
 
-\`\`\`bash
+```bash
 git clone https://github.com/primecodes-ops/crud-api.git
 cd crud-api
 pip install -r requirements.txt
-\`\`\`
+```
 
 ## Running the server
-\`\`\`bash
+```bash
 uvicorn main:app --reload
-\`\`\`
+```
 
 Server runs at `http://localhost:8000`. Interactive docs at `http://localhost:8000/docs`
 
