@@ -41,11 +41,16 @@ async def health():
 
 
 @app.get("/tasks")
-async def get_tasks(done: bool | None = None):
-    if done is None:
-        return task_objects
+async def get_tasks(done: bool | None = None, search: str | None = None):
+    result = task_objects
 
-    return [task for task in task_objects if task["done"] == done]
+    if done is not None:
+        result = [task for task in result if task["done"] == done]
+
+    if search is not None:
+        result = [task for task in result if search.lower() in task["title"].lower()]
+
+    return result
 
 
 """
