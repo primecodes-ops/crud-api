@@ -63,7 +63,7 @@ async def get_task(id: int):
     task = next((item for item in task_objects if item["id"] == id), None)
 
     if task is None:
-        return JSONResponse(status_code=404, content={"error": "Task 99 not found"})
+        return JSONResponse(status_code=404, content={"error": f"Task {id} not found"})
 
     return task
 
