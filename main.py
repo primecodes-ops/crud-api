@@ -19,6 +19,12 @@ class taskChange(BaseModel):
     done: bool
 
 
+class taskOut(BaseModel):
+    id: int
+    title: str
+    done: bool
+
+
 @app.get("/")
 async def root():
     return {"message": "hello world"}
@@ -35,8 +41,11 @@ async def health():
 
 
 @app.get("/tasks")
-async def tasks():
-    return task_objects
+async def get_tasks(done: bool | None = None):
+    if done is None:
+        return task_objects
+
+    return [task for task in task_objects if task["done"] == done]
 
 
 """
@@ -59,15 +68,27 @@ curl -i [http://localhose:8000/tasks/{id}]
 """
 
 
-@app.post("/tasks/", status_code=201, response_model=taskCreate)
+@app.get("/tasks")
+async def get_done_tasks(done: bool = False):
+    tasks = [task for task in task_objects if task["done"] == done]
+
+    if not tasks:
+        return JSONResponse(
+            status_code=404, content={"error": "No matching tasks found."}
+        )
+
+    return tasks
+
+
+@app.post("/tasks/", status_code=201, response_model=taskOut)
 async def create(task: taskCreate):
     if not task.title or not task.title.strip():
         return JSONResponse(status_code=400, content={"error": "Title is empty"})
 
     id = task_objects[-1]["id"] + 1
-    task_objects.append({"id": id, "title": task, "done": False})
+    task_objects.append({"id": id, "title": task.title, "done": False})
 
-    return {"id": id, "title": task, "done": False}
+    return {"id": id, "title": task.title, "done": False}
 
 
 """
