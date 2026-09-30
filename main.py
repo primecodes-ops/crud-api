@@ -59,7 +59,7 @@ curl -i [http://localhose:8000/tasks]
 
 
 @app.get("/tasks/{id}")
-async def task(id: int):
+async def get_task(id: int):
     task = next((item for item in task_objects if item["id"] == id), None)
 
     if task is None:
@@ -73,24 +73,12 @@ curl -i [http://localhose:8000/tasks/{id}]
 """
 
 
-@app.get("/tasks")
-async def get_done_tasks(done: bool = False):
-    tasks = [task for task in task_objects if task["done"] == done]
-
-    if not tasks:
-        return JSONResponse(
-            status_code=404, content={"error": "No matching tasks found."}
-        )
-
-    return tasks
-
-
-@app.post("/tasks/", status_code=201, response_model=taskOut)
+@app.post("/tasks", status_code=201, response_model=taskOut)
 async def create(task: taskCreate):
     if not task.title or not task.title.strip():
         return JSONResponse(status_code=400, content={"error": "Title is empty"})
 
-    id = task_objects[-1]["id"] + 1
+    id = max((t["id"] for t in task_objects), default=0) + 1
     task_objects.append({"id": id, "title": task.title, "done": False})
 
     return {"id": id, "title": task.title, "done": False}
@@ -101,15 +89,10 @@ curl -i -X POST [http://localhost:8000/tasks] -H "Content-Type: application/json
 """
 
 
-@app.put("/tasks/{id}", response_model=taskChange)
+@app.put("/tasks/{id}", response_model=taskOut)
 async def update(id: int, task: taskChange):
     if not task.title or not task.title.strip():
         return JSONResponse(status_code=400, content={"error": "Title is empty"})
-
-    if not isinstance(task.done, bool):
-        return JSONResponse(
-            status_code=400, content={"error": "Done can only be true or false."}
-        )
 
     for item in task_objects:
         if item["id"] == id:
