@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from fastapi.responses import JSONResponse
 from contextlib import closing
@@ -35,7 +35,7 @@ try:
 
 except sqlite3.OperationalError as e:
     print(f"Failed to create table: {e}")
-    raise
+    raise HTTPException(status_code=500, detail={"error": "Failed to create table."})
 
 
 # Seeds three tasks if table is empty
@@ -106,27 +106,6 @@ def insert_task(db, query, data):
 
 
 # API requests
-task_objects = [
-    {"id": 1, "title": "Finish CRUD API", "done": False},
-    {"id": 5, "title": "Feed cats' lunch", "done": True},
-]
-
-
-class taskCreate(BaseModel):
-    title: str
-
-
-class taskChange(BaseModel):
-    title: str
-    done: bool
-
-
-class taskOut(BaseModel):
-    id: int
-    title: str
-    done: bool
-
-
 @app.get("/")
 async def root():
     return {"message": "hello world"}
@@ -142,84 +121,76 @@ async def health():
     return {"status": "ok"}
 
 
+# Tasks API requests
 @app.get("/tasks")
-async def get_tasks(done: bool | None = None, search: str | None = None):
-    result = task_objects
+async def get_all_task():
+    try:
+        with closing(sqlite3.connect(db)) as conn:
+            cursor = conn.cursor()
 
-    if done is not None:
-        result = [task for task in result if task["done"] == done]
+            cursor.execute("SELECT * FROM tasks")
 
-    if search is not None:
-        result = [task for task in result if search.lower() in task["title"].lower()]
+            users = cursor.fetchall()
+            print("Tasks fetched succesfully.")
 
-    return result
+            return users
 
-
-"""
-curl -i [http://localhose:8000/tasks]
-"""
+    except sqlite3.OperationalError as e:
+        print(f"Error 404: Task not found: {e}")
+        raise HTTPException(status_code=404, detail={"error": "Tasks not found"})
 
 
 @app.get("/tasks/{id}")
 async def get_task(id: int):
-    task = next((item for item in task_objects if item["id"] == id), None)
+    try:
+        with closing(sqlite3.connect(db)) as conn:
+            cursor = conn.cursor()
 
-    if task is None:
-        return JSONResponse(status_code=404, content={"error": f"Task {id} not found"})
+            cursor.execute(f"SELECT * FROM tasks WHERE id == ?", (id,))
 
-    return task
+            task = cursor.fetchone()
+            print("Tasks fetched succesfully.")
 
+            if task is None:
+                raise HTTPException(status_code=404, detail={"error": "Task not found"})
 
-"""
-curl -i [http://localhose:8000/tasks/{id}]
-"""
+            return task
 
-
-@app.post("/tasks", status_code=201, response_model=taskOut)
-async def create(task: taskCreate):
-    if not task.title or not task.title.strip():
-        return JSONResponse(status_code=400, content={"error": "Title is empty"})
-
-    id = max((t["id"] for t in task_objects), default=0) + 1
-    task_objects.append({"id": id, "title": task.title, "done": False})
-
-    return {"id": id, "title": task.title, "done": False}
+    except sqlite3.OperationalError as e:
+        print(f"Error 500: Database error: {e}")
+        raise HTTPException(status_code=500, detail={"error": "Database error"})
 
 
-"""
-curl -i -X POST [http://localhost:8000/tasks] -H "Content-Type: application/json" -d '{"title":"Buy milk"}'
-"""
+# @app.post("/tasks", status_code=201, response_model=taskOut)
+# async def create(task: taskCreate):
+#     if not task.title or not task.title.strip():
+#         return JSONResponse(status_code=400, content={"error": "Title is empty"})
+
+#     id = max((t["id"] for t in task_objects), default=0) + 1
+#     task_objects.append({"id": id, "title": task.title, "done": False})
+
+#     return {"id": id, "title": task.title, "done": False}
 
 
-@app.put("/tasks/{id}", response_model=taskOut)
-async def update(id: int, task: taskChange):
-    if not task.title or not task.title.strip():
-        return JSONResponse(status_code=400, content={"error": "Title is empty"})
+# @app.put("/tasks/{id}", response_model=taskOut)
+# async def update(id: int, task: taskChange):
+#     if not task.title or not task.title.strip():
+#         return JSONResponse(status_code=400, content={"error": "Title is empty"})
 
-    for item in task_objects:
-        if item["id"] == id:
-            item["title"] = task.title
-            item["done"] = task.done
-            return item
+#     for item in task_objects:
+#         if item["id"] == id:
+#             item["title"] = task.title
+#             item["done"] = task.done
+#             return item
 
-    return JSONResponse(status_code=404, content={"error": "Task not found."})
-
-
-"""
-curl -i -X PUT [http://localhost:8000/tasks/{id}] -H "Content-Type: application/json" -d '{"title":"Buy bread", "done": false}'
-"""
+#     return JSONResponse(status_code=404, content={"error": "Task not found."})
 
 
-@app.delete("/tasks/{id}", status_code=204)
-async def delete(id: int):
-    for i, item in enumerate(task_objects):
-        if item["id"] == id:
-            task_objects.pop(i)
-            return
+# @app.delete("/tasks/{id}", status_code=204)
+# async def delete(id: int):
+#     for i, item in enumerate(task_objects):
+#         if item["id"] == id:
+#             task_objects.pop(i)
+#             return
 
-    return JSONResponse(status_code=404, content={"error": "Task not found."})
-
-
-"""
-curl -i -X DELETE [http://localhost:8000/tasks/{id}]
-"""
+#     return JSONResponse(status_code=404, content={"error": "Task not found."})
