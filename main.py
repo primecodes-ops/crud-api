@@ -7,16 +7,13 @@ import sqlite3
 # Initializing FastAPI()
 app = FastAPI()
 
+# Path to the SQLite database file (created automatically if missing)
+db = "tasks.db"
+
 
 # Creating task BaseModel
 class taskCreate(BaseModel):
     title: str
-
-
-# Displaying task BaseModel
-class taskOut(BaseModel):
-    title: str
-    done: int
 
 
 # Updating task BaseModel
@@ -40,8 +37,38 @@ def insert_task(db, data):
         raise HTTPException(status_code=500, detail={"error": "Database error"})
 
 
-# Path to the SQLite database file (created automatically if missing)
-db = "tasks.db"
+# Update task function
+def update_task(db, id, data):
+    try:
+        with closing(sqlite3.connect(db)) as conn:
+            cursor = conn.cursor()
+
+            # Update task
+            cursor.execute(
+                """UPDATE tasks
+                SET title = ?, done = ?
+                WHERE id = ?;""",
+                (*data, id),
+            )
+            conn.commit()
+
+    except sqlite3.OperationalError as e:
+        print(f"Error 500: Database error: {e}")
+        raise HTTPException(status_code=500, detail={"error": "Database error"})
+
+
+# Delete task function
+def delete_task(db, id):
+    try:
+        with closing(sqlite3.connect(db)) as conn:
+            cursor = conn.cursor()
+
+            cursor.execute("DELETE FROM tasks WHERE id = ?;", (id,))
+            conn.commit()
+
+    except sqlite3.OperationalError as e:
+        print(f"Error 500: Database error: {e}")
+        raise HTTPException(status_code=500, detail={"error": "Database error"})
 
 
 # Create tasks table
@@ -103,7 +130,7 @@ async def health():
     return {"status": "ok"}
 
 
-# Tasks API requests
+# Get all tasks
 @app.get("/tasks")
 async def get_all_task():
     try:
@@ -127,6 +154,7 @@ async def get_all_task():
         raise HTTPException(status_code=500, detail={"error": "Database error"})
 
 
+# Get task using id
 @app.get("/tasks/{id}")
 async def get_task(id: int):
     try:
@@ -148,36 +176,38 @@ async def get_task(id: int):
         raise HTTPException(status_code=500, detail={"error": "Database error"})
 
 
+# Create task
 @app.post("/tasks", status_code=201)
 async def create_task(task: taskCreate):
     if not task.title or not task.title.strip():
         return JSONResponse(status_code=400, content={"error": "Title is empty."})
 
     insert_task(db, (task.title, 0))
+    print("Task created succesfully.")
     id = cursor.lastrowid
 
     return {"id": id, "title": task.title, "done": 0}
 
 
-# @app.put("/tasks/{id}", response_model=taskOut)
-# async def update(id: int, task: taskChange):
-#     if not task.title or not task.title.strip():
-#         return JSONResponse(status_code=400, content={"error": "Title is empty"})
+# Update a task
+@app.put("/tasks/{id}")
+async def update(id: int, task: taskChange):
+    if not task.title or not task.title.strip():
+        return JSONResponse(status_code=400, content={"error": "Title is empty."})
 
-#     for item in task_objects:
-#         if item["id"] == id:
-#             item["title"] = task.title
-#             item["done"] = task.done
-#             return item
+    update_task(db, id, (task.title, task.done))
+    print("Task updated succesfully.")
 
-#     return JSONResponse(status_code=404, content={"error": "Task not found."})
+    return {"id": id, "title": task.title, "done": task.done}
 
 
-# @app.delete("/tasks/{id}", status_code=204)
-# async def delete(id: int):
-#     for i, item in enumerate(task_objects):
-#         if item["id"] == id:
-#             task_objects.pop(i)
-#             return
+# Delete task
+@app.delete("/tasks/{id}", status_code=204)
+async def delete(id: int):
+    if not id:
+        return JSONResponse(
+            status_code=400, content={"error": "ID should be of int type."}
+        )
 
-#     return JSONResponse(status_code=404, content={"error": "Task not found."})
+    delete_task(db, id)
+    print("Task deleted succesfully.")
