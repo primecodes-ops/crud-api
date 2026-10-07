@@ -1,30 +1,55 @@
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 from contextlib import closing
 import sqlite3
 
 # Initializing FastAPI()
 app = FastAPI()
 
+
+# Creating task BaseModel
+class taskCreate(BaseModel):
+    title: str
+
+
+# Displaying task BaseModel
+class taskOut(BaseModel):
+    title: str
+    done: int
+
+
+# Updating task BaseModel
+class taskChange(BaseModel):
+    title: str
+    done: int
+
+
+# Insert task function
+def insert_task(db, data):
+    try:
+        with closing(sqlite3.connect(db)) as conn:
+            cursor = conn.cursor()
+
+            # Insert tasks
+            cursor.execute("INSERT INTO tasks (title, done) VALUES (?, ?)", data)
+            conn.commit()
+
+    except sqlite3.OperationalError as e:
+        print(f"Error 500: Database error: {e}")
+        raise HTTPException(status_code=500, detail={"error": "Database error"})
+
+
 # Path to the SQLite database file (created automatically if missing)
 db = "tasks.db"
 
 
 # Create tasks table
-# - id: auto-assigned primary key
-# - title: the task's text
-# - done: 0 = not done, 1 = done (enforced by the CHECK constraint)
 create_table_query = """CREATE TABLE IF NOT EXISTS tasks (
                         id INTEGER PRIMARY KEY,
                         title TEXT,
                         done INTEGER NOT NULL DEFAULT 0 CHECK (done IN (0,1))
-                  );"""
-
-# Create the tasks table at startup.
-# IF NOT EXISTS makes this safe to run repeatedly.
-# On failure, the error is printed and re-raised so the app does not
-# start without a table.
+                    );"""
 try:
     with closing(sqlite3.connect(db)) as conn:
         cursor = conn.cursor()
@@ -40,20 +65,6 @@ except sqlite3.OperationalError as e:
 
 # Seeds three tasks if table is empty
 def seed_tasks(db):
-    """Insert three sample tasks, but only if the tasks table is empty.
-
-    Uses a single connection and a single commit, so seeding is
-    all-or-nothing: if any insert fails, none are saved.
-
-    Args:
-        db: Path to the SQLite database file.
-
-    Raises:
-        sqlite3.Error: If the table is missing, the database is locked,
-            or an insert fails. Errors are not caught here so the caller
-            can decide how to handle them.
-    """
-
     sample_tasks = [
         ("Stretch your body", 0),
         ("Feed your cats", 0),
@@ -74,35 +85,6 @@ def seed_tasks(db):
 
 # Runs once at startup, after the table has been created
 seed_tasks(db)
-
-
-# Insert task function
-def insert_task(db, query, data):
-    """Run a single INSERT query and commit it.
-
-    A general-purpose helper: the caller supplies the query and values.
-    Always use ? placeholders for values instead of building the query
-    with f-strings, to avoid SQL injection.
-
-    Args:
-        db: Path to the SQLite database file.
-        query: An INSERT statement with ? placeholders,
-            e.g. "INSERT INTO tasks (title, done) VALUES (?, ?)".
-        data: A tuple of values matching the placeholders,
-            e.g. ("Read a book", 0). A single value needs a trailing
-            comma: ("Read a book",).
-
-    Raises:
-        sqlite3.Error: If the insert fails (e.g. a CHECK constraint
-            violation raises sqlite3.IntegrityError).
-    """
-
-    with closing(sqlite3.connect(db)) as conn:
-        cursor = conn.cursor()
-
-        # Insert tasks
-        cursor.execute(query, data)
-        conn.commit()
 
 
 # API requests
@@ -130,14 +112,19 @@ async def get_all_task():
 
             cursor.execute("SELECT * FROM tasks")
 
-            users = cursor.fetchall()
+            tasks = cursor.fetchall()
             print("Tasks fetched succesfully.")
 
-            return users
+            if tasks is None:
+                raise HTTPException(
+                    status_code=404, detail={"error": "Tasks not found"}
+                )
+
+            return tasks
 
     except sqlite3.OperationalError as e:
-        print(f"Error 404: Task not found: {e}")
-        raise HTTPException(status_code=404, detail={"error": "Tasks not found"})
+        print(f"Error 500: Database error: {e}")
+        raise HTTPException(status_code=500, detail={"error": "Database error"})
 
 
 @app.get("/tasks/{id}")
@@ -161,15 +148,15 @@ async def get_task(id: int):
         raise HTTPException(status_code=500, detail={"error": "Database error"})
 
 
-# @app.post("/tasks", status_code=201, response_model=taskOut)
-# async def create(task: taskCreate):
-#     if not task.title or not task.title.strip():
-#         return JSONResponse(status_code=400, content={"error": "Title is empty"})
+@app.post("/tasks", status_code=201)
+async def create_task(task: taskCreate):
+    if not task.title or not task.title.strip():
+        return JSONResponse(status_code=400, content={"error": "Title is empty."})
 
-#     id = max((t["id"] for t in task_objects), default=0) + 1
-#     task_objects.append({"id": id, "title": task.title, "done": False})
+    insert_task(db, (task.title, 0))
+    id = cursor.lastrowid
 
-#     return {"id": id, "title": task.title, "done": False}
+    return {"id": id, "title": task.title, "done": 0}
 
 
 # @app.put("/tasks/{id}", response_model=taskOut)
