@@ -132,17 +132,23 @@ async def health():
 
 # Get all tasks
 @app.get("/tasks")
-async def get_all_task():
+async def get_all_task(search: str | None = None):
     try:
         with closing(sqlite3.connect(db)) as conn:
             cursor = conn.cursor()
 
-            cursor.execute("SELECT * FROM tasks")
+            if search is None:
+                cursor.execute("SELECT * FROM tasks")
 
-            tasks = cursor.fetchall()
+            else:
+                cursor.execute(
+                    "SELECT * FROM tasks WHERE title LIKE ?", (f"%{search}%",)
+                )
+
+            tasks = cursor.fetchone()
             print("Tasks fetched succesfully.")
 
-            if tasks is None:
+            if not tasks:
                 raise HTTPException(
                     status_code=404, detail={"error": "Tasks not found"}
                 )
