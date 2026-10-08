@@ -176,6 +176,25 @@ async def get_task(id: int):
         raise HTTPException(status_code=500, detail={"error": "Database error"})
 
 
+# Get the database's statistics
+@app.get("/stats")
+async def get_stats():
+    try:
+        with closing(sqlite3.connect(db)) as conn:
+            cursor = conn.cursor()
+
+            cursor.execute("SELECT COUNT(*) FROM tasks;")
+
+            stats = cursor.fetchall()
+            print("tasks Table statistics returned succesfully.")
+
+            return stats
+
+    except sqlite3.OperationalError as e:
+        print(f"Error 500: Database error: {e}")
+        raise HTTPException(status_code=500, detail={"error": "Database error"})
+
+
 # Create task
 @app.post("/tasks", status_code=201)
 async def create_task(task: taskCreate):
