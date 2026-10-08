@@ -1,6 +1,29 @@
 # Full CRUD Task Manager API
 
-A simple CRUD API for managing tasks, built with FastAPI.
+A simple CRUD API for managing tasks, built with FastAPI and backed by SQLite.
+
+## Why SQLite?
+SQLite was chosen because this project is small and single-user, so a full database server would be overkill.
+
+- **Zero setup:** there is no server to install, configure, or keep running.
+- **Built into Python:** the `sqlite3` module ships with the standard library, so there is no extra dependency.
+- **Single file:** the whole database is one file, which makes it easy to inspect, back up, reset, or delete.
+- **Real SQL:** it still gives you tables, constraints, and persistent storage, unlike an in-memory list that disappears on restart.
+
+The trade-off is that SQLite handles limited concurrent writes, so for a multi-user production app a server database such as PostgreSQL would be the better fit.
+
+## Where is the database stored?
+The database is a single file named `tasks.db`, located in the project root (next to `main.py`).
+
+```
+crud-api/
+├── main.py
+├── requirements.txt
+├── tasks.db        <-- SQLite database file
+└── images/
+```
+
+The file is created automatically the first time the server starts. To reset all data, stop the server and delete `tasks.db`. It will be recreated empty on the next start.
 
 ## Installation
 **Pre-requisites**
@@ -24,26 +47,30 @@ source .venv/bin/activate   # macOS/Linux
 .venv\Scripts\activate      # Windows
 ```
 
-###  Install dependencies
+### Install dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-## Running the server
+## How to start the project
+Once the dependencies are installed and the virtual environment is active, run:
+
 ```bash
 uvicorn main:app --reload
 ```
 
-Server runs at `http://localhost:8000`. Interactive docs at `http://localhost:8000/docs`
+- The server runs at `http://localhost:8000`.
+- Interactive docs (Swagger UI) are at `http://localhost:8000/docs`.
+- On first start, `tasks.db` is created automatically.
 
 ## API Endpoints Summary
 | Method | API Endpoint | Description |
 |--------|--------------|-------------|
-| GET    | tasks/       | Gets all tasks |
-| GET    | tasks/{id}   | Gets a task using id |
+| GET    | /tasks/      | Gets all tasks |
+| GET    | /tasks/{id}  | Gets a task using id |
 | POST   | /tasks/      | Creates a task |
 | PUT    | /tasks/{id}  | Updates a task |
-| DELETE | /tasks{id}   | Deletes a task |
+| DELETE | /tasks/{id}  | Deletes a task |
 
 ## Requests using curl
 *{} are only placeholders. Replace them with the variable inside them excluding the {}*
@@ -79,37 +106,50 @@ curl -i -X DELETE http://localhost:8000/tasks/{id}
 
 ---
 
-### GET tasks/ Swagger UI Screenshot
-![GET tasks/ Swagger UI Screenshot](images/swagger-ui-get-all-tasks.png)
+### GET /tasks Swagger UI Screenshot
+![GET /tasks Swagger UI Screenshot](images/swagger-ui-get-all-tasks.png)
 ```bash
 curl -i http://localhost:8000/tasks
 ```
 ---
 
-
-### GET tasks/{id} Swagger UI Screenshot
-![GET tasks/{id} Swagger UI Screenshot](images/swagger-ui-get-task.png)
+### GET /tasks/{id} Swagger UI Screenshot
+![GET /tasks/{id} Swagger UI Screenshot](images/swagger-ui-get-task.png)
 ```bash
 curl -i http://localhost:8000/tasks/1
 ```
 ---
 
-### POST tasks/{id} Swagger UI Screenshot
-![POST tasks/{id} Swagger UI Screenshot](images/swagger-ui-post-task.png)
+### POST /tasks Swagger UI Screenshot
+![POST /tasks Swagger UI Screenshot](images/swagger-ui-post-task.png)
 ```bash
 curl -i -X POST http://localhost:8000/tasks -H "Content-Type: application/json" -d '{"title": "Read Module 1"}'
 ```
 ---
 
-### PUT tasks/{id} Swagger UI Screenshot
-![PUT tasks/{id} Swagger UI Screenshot](images/swagger-ui-put-task.png)
+### PUT /tasks/{id} Swagger UI Screenshot
+![PUT /tasks/{id} Swagger UI Screenshot](images/swagger-ui-put-task.png)
 ```bash
 curl -i -X PUT http://localhost:8000/tasks/1 -H "Content-Type: application/json" -d '{"title":"add README", "done": false}'
 ```
 ---
 
-### DELETE tasks/{id} Swagger UI Screenshot
-![DELETE tasks/{id} Swagger UI Screenshot](images/swagger-ui-delete-task.png)
+### DELETE /tasks/{id} Swagger UI Screenshot
+![DELETE /tasks/{id} Swagger UI Screenshot](images/swagger-ui-delete-task.png)
 ```bash
 curl -i -X DELETE http://localhost:8000/tasks/5
+```
+
+## Database viewer
+The contents of `tasks.db` can be inspected with a database viewer such as [DB Browser for SQLite](https://sqlitebrowser.org/). The screenshot below shows the `tasks` table after creating a few tasks through the API.
+
+![Database viewer screenshot](images/db-viewer.png)
+
+## Example SQL query
+This query, run in the database viewer, lists every task that has not been completed yet:
+
+```sql
+SELECT id, title, done
+FROM tasks
+WHERE done = 0;
 ```
