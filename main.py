@@ -185,10 +185,31 @@ async def get_stats():
 
             cursor.execute("SELECT COUNT(*) FROM tasks;")
 
-            stats = cursor.fetchall()
+            stats = cursor.fetchone()
             print("tasks Table statistics returned succesfully.")
 
             return stats
+
+    except sqlite3.OperationalError as e:
+        print(f"Error 500: Database error: {e}")
+        raise HTTPException(status_code=500, detail={"error": "Database error"})
+
+
+# Sort alphabetically
+@app.get("/sort")
+async def sort():
+    try:
+        with closing(sqlite3.connect(db)) as conn:
+            cursor = conn.cursor()
+
+            cursor.execute("""SELECT id, title, done
+                              FROM tasks
+                              ORDER BY title ASC;""")
+
+            sorted = cursor.fetchall()
+            print("tasks Table sorted succesfully.")
+
+            return sorted
 
     except sqlite3.OperationalError as e:
         print(f"Error 500: Database error: {e}")
