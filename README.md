@@ -1,155 +1,164 @@
 # Full CRUD Task Manager API
 
-A simple CRUD API for managing tasks, built with FastAPI and backed by SQLite.
+A REST API for managing tasks, built with **FastAPI** and **PostgreSQL**, and containerized with **Docker Compose**.
 
-## Why SQLite?
-SQLite was chosen because this project is small and single-user, so a full database server would be overkill.
+The API supports creating, retrieving, updating, deleting, searching, and sorting tasks. PostgreSQL stores task data persistently, while Docker Compose runs the API and database together.
 
-- **Zero setup:** there is no server to install, configure, or keep running.
-- **Built into Python:** the `sqlite3` module ships with the standard library, so there is no extra dependency.
-- **Single file:** the whole database is one file, which makes it easy to inspect, back up, reset, or delete.
-- **Real SQL:** it still gives you tables, constraints, and persistent storage, unlike an in-memory list that disappears on restart.
+## Features
 
-The trade-off is that SQLite handles limited concurrent writes, so for a multi-user production app a server database such as PostgreSQL would be the better fit.
+- Full CRUD operations for tasks
+- PostgreSQL database with persistent storage
+- RESTful endpoints with JSON responses
+- Interactive API documentation with Swagger UI
+- Docker Compose setup for running the application and database together
+- Task search, alphabetical sorting, and task statistics
 
-## Where is the database stored?
-The database is a single file named `tasks.db`, located in the project root (next to `main.py`).
+## Tech Stack
 
-```
-crud-api/
-├── main.py
-├── requirements.txt
-├── tasks.db        <-- SQLite database file
-└── images/
-```
+- **Python** and FastAPI
+- **PostgreSQL**
+- **Docker** and Docker Compose
+- **Uvicorn**
+- **Psycopg** for PostgreSQL connectivity
 
-The file is created automatically the first time the server starts. To reset all data, stop the server and delete `tasks.db`. It will be recreated empty on the next start.
+## Getting Started
 
-## Installation
-**Pre-requisites**
-- Python 3.10+
-- pip
+### Prerequisites
+
+- Docker Desktop installed and running
+- Git
+
+### Installation
+
+Clone the repository and enter the project directory:
 
 ```bash
 git clone https://github.com/primecodes-ops/crud-api.git
 cd crud-api
 ```
 
-### Create a virtual environment
-```bash
-python3 -m venv .venv   # macOS/Linux
-python -m venv .venv    # Windows
-```
+### Environment Variables
 
-### Activate .venv first
-```bash
-source .venv/bin/activate   # macOS/Linux
-.venv\Scripts\activate      # Windows
-```
-
-### Install dependencies
-```bash
-pip install -r requirements.txt
-```
-
-## How to start the project
-Once the dependencies are installed and the virtual environment is active, run:
+Copy `.env.example` to `.env` and configure the database connection if needed.
 
 ```bash
-uvicorn main:app --reload
+cp .env.example .env
 ```
 
-- The server runs at `http://localhost:8000`.
-- Interactive docs (Swagger UI) are at `http://localhost:8000/docs`.
-- On first start, `tasks.db` is created automatically.
+The example configuration should contain:
 
-## API Endpoints Summary
-| Method | API Endpoint | Description |
-|--------|--------------|-------------|
-| GET    | /tasks/      | Gets all tasks |
-| GET    | /tasks/{id}  | Gets a task using id |
-| POST   | /tasks/      | Creates a task |
-| PUT    | /tasks/{id}  | Updates a task |
-| DELETE | /tasks/{id}  | Deletes a task |
+```env
+DATABASE_URL=postgresql://postgres:dev@db:5432/tasks
+```
 
-## Requests using curl
-*{} are only placeholders. Replace them with the variable inside them excluding the {}*
+| Variable | Description |
+|---|---|
+| `DATABASE_URL` | PostgreSQL connection string used by the API |
 
-Get all tasks
+The hostname `db` refers to the PostgreSQL service inside the Docker Compose network. The credentials shown above are for local development only.
+
+Make sure your `docker-compose.yml` loads the variable from `.env`, or explicitly defines the equivalent environment variable for the API service.
+
+**Important:** Keep `.env` out of version control. Commit `.env.example` instead, and never put production credentials in the example file.
+
+### Run the entire application
+
+With Docker Desktop running, execute this single command:
+
 ```bash
-curl -i http://localhost:8000/tasks
+docker compose up
 ```
 
-Get a task using id
-```bash
-curl -i http://localhost:8000/tasks/{id}
-```
+Docker Compose builds the API image, starts PostgreSQL, and runs the API.
 
-Create a task
-```bash
-curl -i -X POST http://localhost:8000/tasks -H "Content-Type: application/json" -d '{"title": "{title}"}'
-```
+Once the server has started, open:
 
-Update a task
-```bash
-curl -i -X PUT http://localhost:8000/tasks/{id} -H "Content-Type: application/json" -d '{"title":"{title}", "done": false}'
-```
+- **API:** http://localhost:8000/
+- **Swagger UI:** http://localhost:8000/docs
+- **ReDoc:** http://localhost:8000/redoc
 
-Delete a task
-```bash
-curl -i -X DELETE http://localhost:8000/tasks/{id}
-```
+Press `Control + C` to stop the foreground process. Your PostgreSQL data is stored in a named Docker volume so it can persist across container restarts and recreation.
 
-## Requests example using curl
-### API Swagger UI Screenshot
-![API Swagger UI Screenshot](images/swagger-ui.png)
+## API Endpoints
 
----
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/` | Returns a welcome message |
+| GET | `/api` | Returns API information and version |
+| GET | `/health` | Returns the API health status |
+| GET | `/tasks` | Retrieves all tasks; optionally filters by title using `?search=keyword` |
+| GET | `/tasks/{id}` | Retrieves a task by ID |
+| POST | `/tasks` | Creates a new task |
+| PUT | `/tasks/{id}` | Updates a task's title and completion status |
+| DELETE | `/tasks/{id}` | Deletes a task by ID |
+| GET | `/stats` | Returns the total number of tasks |
+| GET | `/sort` | Retrieves tasks sorted alphabetically by title |
 
-### GET /tasks Swagger UI Screenshot
-![GET /tasks Swagger UI Screenshot](images/swagger-ui-get-all-tasks.png)
+### Example Request
+
+Retrieve all tasks using `curl`:
+
 ```bash
 curl -i http://localhost:8000/tasks
 ```
----
 
-### GET /tasks/{id} Swagger UI Screenshot
-![GET /tasks/{id} Swagger UI Screenshot](images/swagger-ui-get-task.png)
-```bash
-curl -i http://localhost:8000/tasks/1
-```
----
+The `-i` option includes the HTTP response status and headers along with the response body.
 
-### POST /tasks Swagger UI Screenshot
-![POST /tasks Swagger UI Screenshot](images/swagger-ui-post-task.png)
-```bash
-curl -i -X POST http://localhost:8000/tasks -H "Content-Type: application/json" -d '{"title": "Read Module 1"}'
-```
----
+## Database
 
-### PUT /tasks/{id} Swagger UI Screenshot
-![PUT /tasks/{id} Swagger UI Screenshot](images/swagger-ui-put-task.png)
-```bash
-curl -i -X PUT http://localhost:8000/tasks/1 -H "Content-Type: application/json" -d '{"title":"add README", "done": false}'
-```
----
+The application uses PostgreSQL to store tasks in a table named `tasks`.
 
-### DELETE /tasks/{id} Swagger UI Screenshot
-![DELETE /tasks/{id} Swagger UI Screenshot](images/swagger-ui-delete-task.png)
+Each task contains:
+
+| Column | Description |
+|---|---|
+| `id` | Unique task identifier, generated automatically |
+| `title` | Task description |
+| `done` | Completion status: `0` for incomplete or `1` for complete |
+
+The database table is created automatically when the application starts. If the table is empty, the application inserts three sample tasks.
+
+### Inspecting the database
+
+With the containers running, execute the following command to open PostgreSQL's interactive terminal:
+
 ```bash
-curl -i -X DELETE http://localhost:8000/tasks/5
+docker compose exec db psql -U postgres -d tasks
 ```
 
-## Database viewer
-The contents of `tasks.db` can be inspected with a database viewer such as [DB Browser for SQLite](https://sqlitebrowser.org/). The screenshot below shows the `tasks` table after creating a few tasks through the API.
+Inside `psql`, list the tables:
 
-![Database viewer screenshot](images/db-viewer.png)
+```sql
+\dt
+```
 
-## Example SQL query
-This query, run in the database viewer, lists every task that has not been completed yet:
+Then retrieve the stored task data:
 
 ```sql
 SELECT id, title, done
 FROM tasks
-WHERE done = 0;
+ORDER BY id;
+```
+
+To leave the PostgreSQL terminal, run:
+
+```sql
+\q
+```
+
+### Database Screenshot
+![PostgreSQL database showing the tasks table and stored task records](images/db-ss.png)
+
+## Project Structure
+
+```text
+crud-api/
+├── main.py
+├── Dockerfile
+├── docker-compose.yml
+├── requirements.txt
+├── .env.example
+├── .gitignore
+└── images/
+    └── database.png
 ```
