@@ -177,18 +177,20 @@ async def health():
 
 # Get all tasks
 @app.get("/tasks")
-async def get_all_task(search: str | None = None):
+async def get_all_task(search: str | None = None, done: int | None = None):
     try:
         with closing(psycopg.connect(db)) as conn:
             cursor = conn.cursor()
 
-            if search is None:
+            if search is None and done is None:
                 cursor.execute("SELECT * FROM tasks")
 
-            else:
+            elif search is not None:
                 cursor.execute(
                     "SELECT * FROM tasks WHERE title LIKE %s", (f"%{search}%",)
                 )
+            elif done is not None and done in (0, 1):
+                cursor.execute("SELECT * FROM tasks WHERE done = %s", (done,))
 
             tasks = cursor.fetchall()
             print("Tasks fetched succesfully.")
@@ -241,16 +243,23 @@ async def get_stats():
         raise HTTPException(status_code=500, detail={"error": "Database error"})
 
 
-# Sort alphabetically
+# Sort alphabetically by title (default) or by done
 @app.get("/sort")
-async def sort():
+async def sort(sort_by: bool | None = None):
     try:
         with closing(psycopg.connect(db)) as conn:
             cursor = conn.cursor()
 
-            cursor.execute("""SELECT id, title, done
-                              FROM tasks
-                              ORDER BY title ASC;""")
+            if sort_by is False:
+                cursor.execute("""SELECT id, title, done
+                       FROM tasks
+                       ORDER BY title ASC;
+                    """)
+            else:
+                cursor.execute("""SELECT id, title, done
+                       FROM tasks
+                       ORDER BY done ASC, title ASC;
+                    """)
 
             sorted = cursor.fetchall()
             print("tasks Table sorted succesfully.")
