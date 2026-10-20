@@ -159,7 +159,20 @@ async def describe_api():
 
 @app.get("/health")
 async def health():
-    return {"status": "ok"}
+    try:
+        with closing(psycopg.connect(db)) as conn:
+            cursor = conn.cursor()
+
+            cursor.execute("SELECT 1")
+            print("Health checked succesfully.")
+
+            return {"status": "ok", "db": "ok"}
+
+    except psycopg.Error as e:
+        print(f"Failed to create table: {e}")
+        raise HTTPException(
+            status_code=503, detail={"error": "Database service is unavailable."}
+        )
 
 
 # Get all tasks
